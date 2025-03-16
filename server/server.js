@@ -7,7 +7,7 @@ import cookieParser from "cookie-parser";
 import "./config/passport.js";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
-
+import githubRoutes from "./routes/githubRoutes.js";
 dotenv.config();
 const app = express();
 
@@ -27,6 +27,7 @@ app.use(passport.session());
 
 // Routes
 app.use("/auth", authRoutes);
+app.use("/github", githubRoutes);
 
 // Test API
 app.get("/", (req, res) => res.send("API is running."));

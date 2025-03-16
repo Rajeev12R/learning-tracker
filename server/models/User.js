@@ -1,11 +1,28 @@
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
-    googleId: { type: String, unique: true, sparse: true },
-    githubId: { type: String, unique: true, sparse: true },
-    displayName: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    photo: { type: String },
+    name: {
+        type: String,
+        required: true,
+    },
+    email: {
+        type: String,
+        required: true,
+    },
+    profilePic: {
+        type: String,
+        default: "",
+    },
+    // OAuth providers
+    googleId: String,
+    githubId: String,
+    githubToken: String,
+    provider: {
+        type: String,
+        enum: ['google', 'github'],
+        required: true,
+        default: 'github'
+    },
 }, { timestamps: true });
 
 export default mongoose.model("User", userSchema);
