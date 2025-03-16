@@ -2,13 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Profile from "../components/Profile";
-import { FaGithub, FaStar, FaCodeBranch, FaCircle, FaSync } from 'react-icons/fa';
+import { FaGithub, FaCode, FaDatabase, FaTools, FaClock, FaStar, FaCodeBranch, FaSync, FaServer } from 'react-icons/fa';
 
 axios.defaults.withCredentials = true;
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
-  const [repos, setRepos] = useState([]);
+  const [repoData, setRepoData] = useState({
+    repos: [],
+    stats: null,
+    totalRepos: 0
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -16,7 +20,7 @@ const Dashboard = () => {
   const fetchUserData = async () => {
     try {
       const res = await axios.get("http://localhost:3000/auth/user");
-      console.log("User data:", res.data); 
+      console.log("User data:", res.data);
       setUser(res.data);
       return res.data;
     } catch (err) {
@@ -39,16 +43,11 @@ const Dashboard = () => {
       }
 
       const res = await axios.get("http://localhost:3000/github/repos");
-      console.log("Repos data:", res.data);
+      console.log("Repository data:", res.data);
 
-      if (Array.isArray(res.data)) {
-        setRepos(res.data);
-      } else {
-        console.error("Invalid repos data format:", res.data);
-        throw new Error("Invalid repository data received");
-      }
+      setRepoData(res.data);
     } catch (err) {
-      console.error("Error fetching repos:", err);
+      console.error("Error fetching repositories:", err);
       if (err.response?.status === 401) {
         setError("GitHub authentication expired. Please reconnect your GitHub account.");
       } else {
@@ -64,28 +63,145 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const initializeDashboard = async () => {
-      try {
-        await fetchUserData();
-        await fetchRepositories();
-      } catch (error) {
-        console.error("Dashboard initialization error:", error);
-      }
-    };
-
-    initializeDashboard();
+    fetchRepositories();
   }, [navigate]);
 
-  const getLanguageColor = (language) => {
-    const colors = {
-      JavaScript: '#f1e05a',
-      TypeScript: '#2b7489',
-      Python: '#3572A5',
-      Java: '#b07219',
-      HTML: '#e34c26',
-      CSS: '#563d7c',
-    };
-    return colors[language] || '#8e8e8e';
+  const renderStats = () => {
+    const stats = repoData.stats;
+    if (!stats) return null;
+
+    return (
+      <div className="space-y-6">
+        {/* Overview Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-blue-700">Repositories</h3>
+            <p className="text-2xl font-bold">{repoData.totalRepos}</p>
+          </div>
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-green-700">Total Stars</h3>
+            <p className="text-2xl font-bold">{stats.totalStars}</p>
+          </div>
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-purple-700">Total Forks</h3>
+            <p className="text-2xl font-bold">{stats.totalForks}</p>
+          </div>
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-yellow-700">Repository Size</h3>
+            <p className="text-2xl font-bold">{(stats.totalSize / 1024).toFixed(1)} MB</p>
+          </div>
+        </div>
+
+        {/* Last Commit Info */}
+        {stats.lastCommitInfo && (
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-gray-700">Latest Activity</h3>
+            <div className="mt-2">
+              <p><strong>Repository:</strong> {stats.lastCommitInfo.repo}</p>
+              <p><strong>Last Commit:</strong> {new Date(stats.lastCommitInfo.date).toLocaleString()}</p>
+              <p><strong>Message:</strong> {stats.lastCommitInfo.message}</p>
+              <p><strong>Author:</strong> {stats.lastCommitInfo.author}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Tech Stacks */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h3 className="text-lg font-semibold flex items-center">
+              <FaCode className="mr-2" /> Frontend
+            </h3>
+            <div className="mt-2">
+              {Object.entries(stats.techStacks.frontend).map(([tech, count]) => (
+                <div key={tech} className="flex justify-between items-center">
+                  <span>{tech}</span>
+                  <span className="text-gray-500">{count} repos</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h3 className="text-lg font-semibold flex items-center">
+              <FaServer className="mr-2" /> Backend
+            </h3>
+            <div className="mt-2">
+              {Object.entries(stats.techStacks.backend).map(([tech, count]) => (
+                <div key={tech} className="flex justify-between items-center">
+                  <span>{tech}</span>
+                  <span className="text-gray-500">{count} repos</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h3 className="text-lg font-semibold flex items-center">
+              <FaDatabase className="mr-2" /> Databases
+            </h3>
+            <div className="mt-2">
+              {Object.entries(stats.techStacks.database).map(([tech, count]) => (
+                <div key={tech} className="flex justify-between items-center">
+                  <span>{tech}</span>
+                  <span className="text-gray-500">{count} repos</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h3 className="text-lg font-semibold flex items-center">
+              <FaTools className="mr-2" /> Tools & Testing
+            </h3>
+            <div className="mt-2">
+              {Object.entries(stats.techStacks.tools).map(([tech, count]) => (
+                <div key={tech} className="flex justify-between items-center">
+                  <span>{tech}</span>
+                  <span className="text-gray-500">{count} repos</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Languages */}
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h3 className="text-lg font-semibold mb-4">Top Languages</h3>
+          <div className="space-y-2">
+            {Object.entries(stats.topLanguages).slice(0, 5).map(([language, bytes]) => {
+              const percentage = (bytes / Object.values(stats.topLanguages).reduce((a, b) => a + b, 0) * 100).toFixed(1);
+              return (
+                <div key={language} className="relative">
+                  <div className="flex justify-between mb-1">
+                    <span>{language}</span>
+                    <span>{percentage}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div
+                      className="bg-blue-600 h-2.5 rounded-full"
+                      style={{ width: `${percentage}%` }}
+                    ></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Monthly Activity */}
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h3 className="text-lg font-semibold mb-4">Activity Timeline</h3>
+          <div className="space-y-2">
+            {Object.entries(stats.activityByMonth)
+              .sort((a, b) => b[0].localeCompare(a[0]))
+              .slice(0, 6)
+              .map(([month, count]) => (
+                <div key={month} className="flex justify-between items-center">
+                  <span>{new Date(month).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}</span>
+                  <span>{count} updates</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -101,27 +217,15 @@ const Dashboard = () => {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center">
                   <FaGithub className="mr-2" />
-                  Your Repositories
+                  Repository Overview
                 </h2>
-                <div className="flex items-center space-x-4">
-                  {!loading && (
-                    <button
-                      onClick={fetchRepositories}
-                      className="text-gray-600 hover:text-gray-900"
-                      title="Refresh repositories"
-                    >
-                      <FaSync className={loading ? 'animate-spin' : ''} />
-                    </button>
-                  )}
-                  <a
-                    href={`https://github.com/${user?.name}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                  >
-                    View All on GitHub
-                  </a>
-                </div>
+                <button
+                  onClick={fetchRepositories}
+                  className="text-gray-600 hover:text-gray-900"
+                  title="Refresh data"
+                >
+                  <FaSync className={loading ? 'animate-spin' : ''} />
+                </button>
               </div>
 
               {loading && (
@@ -156,60 +260,7 @@ const Dashboard = () => {
                 </div>
               )}
 
-              {!loading && !error && repos.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  No repositories found
-                </div>
-              )}
-
-              <div className="space-y-4">
-                {repos.map((repo) => (
-                  <div
-                    key={repo.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <a
-                          href={repo.html_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-lg font-semibold text-blue-600 hover:text-blue-800"
-                        >
-                          {repo.name}
-                        </a>
-                        {repo.description && (
-                          <p className="mt-1 text-gray-600 text-sm">{repo.description}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex items-center space-x-4 text-sm">
-                      {repo.language && (
-                        <div className="flex items-center">
-                          <FaCircle
-                            className="mr-1"
-                            style={{ color: getLanguageColor(repo.language) }}
-                            size={12}
-                          />
-                          <span className="text-gray-600">{repo.language}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center text-gray-600">
-                        <FaStar className="mr-1" />
-                        <span>{repo.stargazers_count}</span>
-                      </div>
-                      <div className="flex items-center text-gray-600">
-                        <FaCodeBranch className="mr-1" />
-                        <span>{repo.forks_count}</span>
-                      </div>
-                      <span className="text-gray-500 text-sm">
-                        Updated {new Date(repo.updated_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {!loading && !error && renderStats()}
             </div>
           </div>
         </div>
